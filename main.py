@@ -20,3 +20,10 @@ def create_course(course: CourseIn):
     new_id = cur.lastrowid
     conn.close()
     return {"id": new_id, "name": course.name}
+
+@app.get("/courses")
+def list_courses():
+    conn = get_db()
+    rows = conn.execute("SELECT id, name FROM courses ORDER BY id").fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
