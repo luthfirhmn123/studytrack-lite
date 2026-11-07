@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StudyTrack-lite</title>
+<style>
+body{font-family:sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem}
+.task{display:flex;justify-content:space-between;align-items:center;border:1px solid #ccc;border-radius:8px;padding:.6rem .8rem;margin:.5rem 0}
+.badge{padding:.1rem .5rem;border-radius:999px;font-size:.8rem;color:#fff}
+.due_soon{background:#e67e22}.overdue{background:#c0392b}.upcoming{background:#2980b9}
+.no_deadline{background:#7f8c8d}.done{background:#27ae60}
+.done-title{text-decoration:line-through;color:#888}
+</style>
+</head>
+<body>
+<h1>StudyTrack-lite</h1>
+<div id="list">Loading...</div>
+<script>
+const LABELS = {due_soon:"Due soon", overdue:"Overdue", upcoming:"Upcoming", no_deadline:"No deadline", done:"Done"};
+
+function parseUtc(s) {
+  if (s.length === 10) return new Date(s);
+  return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(s) ? s : s + "Z");
+}
+
+async function load() {
+  const res = await fetch("/tasks");
+  const tasks = await res.json();
+  const list = document.getElementById("list");
+  list.textContent = "";
+  if (tasks.length === 0) { list.textContent = "No tasks yet."; return; }
+  for (const t of tasks) {
+    const row = document.createElement("div");
+    row.className = "task";
+
+    const left = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = t.title;
+    if (t.is_done) title.className = "done-title";
+    const meta = document.createElement("div");
+    meta.textContent = t.course_name + (t.due_at ? " · due " + parseUtc(t.due_at).toLocaleString() : "");
+    left.append(title, meta);
+
+    const right = document.createElement("div");
+    const badge = document.createElement("span");
+    badge.className = "badge " + t.status;
+    badge.textContent = LABELS[t.status];
+    const btn = document.createElement("button");
+    btn.textContent = t.is_done ? "Undo" : "Done";
+    btn.onclick = async () => {
+      await fetch("/tasks/" + t.id, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({is_done: !t.is_done})
+      });
+      load();
+    };
+    right.append(badge, " ", btn);
+
+    row.append(left, right);
+    list.append(row);
+  }
+}
+load();
+</script>
+</body>
+</html>

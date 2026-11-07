@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from db import get_db, init_db
 from task_status import get_status, sort_key
+from fastapi.responses import FileResponse
 
 app = FastAPI()
 init_db()
@@ -132,3 +133,7 @@ def delete_task(task_id: int):
     if deleted == 0:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"deleted": task_id}
+
+@app.get("/ui")
+def frontend():
+    return FileResponse("index.html")
