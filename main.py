@@ -2,6 +2,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from db import get_db, init_db
+from task_status import get_status, sort_key
 
 app = FastAPI()
 init_db()
@@ -12,7 +13,7 @@ class CourseIn(BaseModel):
 class TaskIn(BaseModel):
     course_id: int
     title: str
-    due_at: str | None = None
+    due_at: datetime | None = None
 
 @app.get("/")
 def home():
@@ -36,6 +37,11 @@ def list_courses():
 
 @app.post("/tasks")
 def create_task(task: TaskIn):
+    title = task.title.strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="Title cannot be empty")
+    due = task.due_at.isoformat() if task.due_at else None
+
     conn = get_db()
     course = conn.execute(
         "SELECT id FROM courses WHERE id = ?", (task.course_id,)
@@ -45,7 +51,7 @@ def create_task(task: TaskIn):
         raise HTTPException(status_code=404, detail="Course not found")
     cur = conn.execute(
         "INSERT INTO tasks (course_id, title, due_at) VALUES (?, ?, ?)",
-        (task.course_id, task.title, task.due_at),
+        (task.course_id, title, due),
     )
     conn.commit()
     new_id = cur.lastrowid
@@ -53,8 +59,8 @@ def create_task(task: TaskIn):
     return {
         "id": new_id,
         "course_id": task.course_id,
-        "title": task.title,
-        "due_at": task.due_at,
+        "title": title,
+        "due_at": due,
         "is_done": False,
     }
 
@@ -73,7 +79,9 @@ def list_tasks():
     for row in rows:
         task = dict(row)
         task["is_done"] = bool(task["is_done"])
+        task["status"] = get_status(task["due_at"], task["is_done"])
         tasks.append(task)
+    tasks.sort(key=sort_key)
     return tasks
 
 class TaskUpdate(BaseModel):
