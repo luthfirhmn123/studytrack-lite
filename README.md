@@ -16,7 +16,7 @@ Python, FastAPI, SQLite, pytest, plain HTML and JavaScript
 
 ## How to run
 ```bash
-git clone https://github.com/YOURUSERNAME/studytrack-lite.git
+git clone https://github.com/luthfirhmn123/studytrack-lite.git
 cd studytrack-lite
 python -m venv venv
 .\venv\Scripts\Activate.ps1
